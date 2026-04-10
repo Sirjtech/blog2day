@@ -14,7 +14,6 @@ let postsShown = 5;
 // --- DYNAMIC DATA FETCH (POSTS) ---
 // --- DYNAMIC DATA FETCH (POSTS) ---
 async function fetchPosts() {
-  // This query gets your latest 10 posts
   const QUERY =
     encodeURIComponent(`*[_type == "post"] | order(publishedAt desc) [0...10] {
     title,
@@ -30,37 +29,56 @@ async function fetchPosts() {
   try {
     const res = await fetch(URL);
     const data = await res.json();
-    const posts = data.result;
+
+    // --- THIS IS THE CRITICAL ADDITION ---
+    // Save the data to your global variable so the search/render functions work
+    blogPosts = data.result;
 
     const mainContainer = document.getElementById("postsContainer");
-    const popularContainer = document.getElementById("popular-grid"); // The bottom section
+    const popularContainer = document.getElementById("popular-grid");
 
-    if (posts && posts.length > 0) {
-      // 1. Fill the Main Feed (Recent Posts)
+    if (blogPosts && blogPosts.length > 0) {
+      // 1. Fill the Main Feed
       if (mainContainer) {
-        mainContainer.innerHTML = posts
+        // Use the global blogPosts we just filled
+        mainContainer.innerHTML = blogPosts
           .map((post) => createPostCard(post))
           .join("");
       }
 
-      // 2. Fill the Popular Section (Bottom)
+      // 2. Fill the Popular Section
       if (popularContainer) {
-        // We'll take the first 3 posts to show in the popular grid
-        const popularPosts = posts.slice(0, 3);
+        const popularPosts = blogPosts.slice(0, 3);
         popularContainer.innerHTML = popularPosts
           .map(
             (post) => `
-          <div class="popular-card">
-            <img src="${post.image}" alt="${post.title}">
-            <div class="popular-card-content">
-              <span>${post.category || "Lifestyle"}</span>
-              <h4><a href="post.html?id=${post.id}">${post.title}</a></h4>
+            <div class="popular-card">
+              <img src="${post.image}" alt="${post.title}">
+              <div class="popular-card-content">
+                <span>${post.category || "Lifestyle"}</span>
+                <h4><a href="post.html?id=${post.id}">${post.title}</a></h4>
+              </div>
             </div>
-          </div>
-        `,
+          `,
           )
           .join("");
       }
+
+      mainContainer.innerHTML = blogPosts
+        .map(
+          (post) => `
+    <article class="post-card">
+        <img src="${post.image || "https://via.placeholder.com/400x250"}" alt="${post.title}">
+        <div class="post-info">
+            <h3>${post.title}</h3>
+            <p>${post.excerpt ? post.excerpt.substring(0, 150) + "..." : "Click read more to see the full story."}</p>
+            <div class="post-meta">${post.category || "General"} | ${new Date(post.date).toLocaleDateString()}</div>
+            <a href="post.html?id=${post.id}" class="btn-read">Read More</a>
+        </div>
+    </article>
+  `,
+        )
+        .join("");
     }
   } catch (err) {
     console.error("Error fetching homepage posts:", err);
@@ -314,9 +332,9 @@ function initPostPage() {
 }
 
 // --- BOOTSTRAP ---
-window.onload = () => {
-  fetchPosts();
-};
+// window.onload = () => {
+//   fetchPosts();
+// };
 
 // COMPONENTS LOADING
 // --- COMPONENTS LOADING ---
