@@ -1,0 +1,350 @@
+// 1. CONFIGURATION
+const SANITY_CONFIG = {
+  projectId: "en43zbld",
+  dataset: "production",
+  useCdn: true,
+  apiVersion: "2021-10-21",
+};
+
+// 2. STATE MANAGEMENT
+let blogPosts = [];
+let postsShown = 5;
+
+// --- DYNAMIC DATA FETCH (POSTS) ---
+// --- DYNAMIC DATA FETCH (POSTS) ---
+// --- DYNAMIC DATA FETCH (POSTS) ---
+async function fetchPosts() {
+  // We use coalesce to check 'excerpt' first, then 'body' as a backup
+  const QUERY =
+    encodeURIComponent(`*[_type == "post"] | order(publishedAt desc) {
+    "id": _id,
+    title,
+    "category": categories[0]->title, 
+    "date": publishedAt,
+    "excerpt": coalesce(
+      excerpt[0].children[0].text, 
+      body[0].children[0].text, 
+      "No description available"
+    ),
+    "image": mainImage.asset->url
+  }`);
+
+  const URL = `https://en43zbld.api.sanity.io/v1/data/query/production?query=${QUERY}`;
+
+  try {
+    const res = await fetch(URL);
+    const data = await res.json();
+    console.log("Posts from Sanity:", data.result);
+
+    if (data.result && data.result.length > 0) {
+      // Update the global state so search and categories work correctly
+      blogPosts = data.result;
+      displayPosts(blogPosts);
+    } else {
+      console.log("No posts found in the cloud yet.");
+    }
+  } catch (err) {
+    console.error("Post Fetch Error:", err);
+  }
+}
+
+async function fetchSinglePost(id) {
+  // 1. Updated Query: "recommended" now fetches a list (up to 6)
+  const QUERY = encodeURIComponent(`{
+    "post": *[_id == "${id}"][0]{
+      title,
+      "date": publishedAt,
+      "category": categories[0]->title,
+      "image": mainImage.asset->url,
+      body,
+      "authorName": author->name
+    },
+    "recommended": *[_type == "post" && _id != "${id}"][0...6]{
+      title,
+      "id": _id
+    }
+  }`);
+
+  const URL = `https://en43zbld.api.sanity.io/v1/data/query/production?query=${QUERY}`;
+
+  try {
+    const res = await fetch(URL);
+    const data = await res.json();
+    const { post, recommended } = data.result;
+
+    if (post) {
+      // --- CONTENT INJECTION ---
+      if (document.getElementById("postTitle"))
+        document.getElementById("postTitle").innerText = post.title;
+
+      const meta = document.getElementById("postMeta");
+      if (meta) {
+        const formattedDate = post.date
+          ? new Date(post.date).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "";
+        meta.innerHTML = `By <strong>${post.authorName || "Oluwabunmi Oke"}</strong> | ${post.category || "General"} | ${formattedDate}`;
+      }
+
+      const imageContainer = document.getElementById("postHeroImage");
+      if (imageContainer && post.image) {
+        imageContainer.innerHTML = `<img src="${post.image}" class="hero-img-full" alt="${post.title}">`;
+      }
+
+      // Update Body Content
+      // Update Body Content
+      const contentArea = document.getElementById("contentPartOne");
+
+      if (contentArea && post.body) {
+        contentArea.innerHTML = post.body
+          .map((block) => {
+            // 1. Handle Headings
+            if (block.style === "h2")
+              return `<h2>${block.children[0].text}</h2>`;
+            if (block.style === "h3")
+              return `<h3>${block.children[0].text}</h3>`;
+            if (block.style === "h4")
+              return `<h4>${block.children[0].text}</h4>`;
+
+            // 2. Handle Lists (Bullet points)
+            if (block.listItem === "bullet") {
+              const listText = block.children
+                .map((c) => {
+                  // If the text has the 'strong' mark, wrap it in <strong>
+                  return c.marks && c.marks.includes("strong")
+                    ? `<strong>${c.text}</strong>`
+                    : c.text;
+                })
+                .join("");
+              return `<li>${listText}</li>`;
+            }
+
+            // 3. Handle Normal Paragraphs (including bold words inside)
+            if (block._type === "block") {
+              const paragraphText = block.children
+                .map((c) => {
+                  // Check for Bold (strong) or Italic (em)
+                  let text = c.text;
+                  if (c.marks && c.marks.includes("strong"))
+                    text = `<strong>${text}</strong>`;
+                  if (c.marks && c.marks.includes("em"))
+                    text = `<em>${text}</em>`;
+                  return text;
+                })
+                .join("");
+
+              return `<p>${paragraphText}</p>`;
+            }
+
+            return "";
+          })
+          .join("");
+      }
+
+      // --- MULTIPLE RECOMMENDATIONS LOGIC ---
+      const suggestionBox = document.getElementById("midSuggestionBox");
+      const suggestionLinkContainer =
+        document.getElementById("midSuggestionLink");
+
+      if (suggestionBox && recommended && recommended.length > 0) {
+        suggestionBox.style.display = "block";
+
+        // Loop through the recommended array and create a list of links
+        suggestionLinkContainer.innerHTML = `
+          <ul class="recommended-list">
+            ${recommended
+              .map(
+                (rec) => `
+              <li><a href="post.html?id=${rec.id}">${rec.title}</a></li>
+            `,
+              )
+              .join("")}
+          </ul>
+        `;
+      } else if (suggestionBox) {
+        suggestionBox.style.display = "none";
+      }
+    }
+  } catch (err) {
+    console.error("Single Post Fetch Error:", err);
+  }
+}
+
+// --- DYNAMIC DATA FETCH (CATEGORIES) ---
+async function fetchCategories() {
+  const url = `https://en43zbld.api.sanity.io/v1/data/query/production?query=${encodeURIComponent('*[_type == "category"]')}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const menuList = document.getElementById("menu-list");
+    if (menuList && data.result) {
+      // 1. Clear everything first
+      menuList.innerHTML = "";
+
+      // 2. Add HOME (Hardcoded)
+      const homeLi = document.createElement("li");
+      homeLi.innerHTML = '<a href="index.html">HOME</a>';
+      menuList.appendChild(homeLi);
+
+      // 3. Add ABOUT (Hardcoded)
+      const aboutLi = document.createElement("li");
+      aboutLi.innerHTML = '<a href="about.html">ABOUT</a>';
+      menuList.appendChild(aboutLi);
+
+      // 4. Add Sanity Categories (Dynamic)
+      data.result.forEach((cat) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="#${cat.title.toLowerCase()}">${cat.title.toUpperCase()}</a>`;
+        menuList.appendChild(li);
+      });
+
+      console.log("Menu fully reconstructed with About and Categories!");
+    }
+  } catch (err) {
+    console.error("Fetch failed:", err);
+  }
+}
+
+// --- RENDERING LOGIC ---
+function renderPage() {
+  if (document.getElementById("postsContainer")) {
+    displayPosts();
+  }
+  if (document.getElementById("postTitle")) {
+    initPostPage();
+  }
+}
+
+function displayPosts(filteredData = null) {
+  const container = document.getElementById("postsContainer");
+  if (!container) return;
+
+  const dataToRender = filteredData
+    ? filteredData
+    : blogPosts.slice(0, postsShown);
+
+  container.innerHTML = dataToRender
+    .map((post) => {
+      // Clean up the date format
+      const formattedDate = post.date
+        ? new Date(post.date).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "Recent";
+
+      return `
+        <article class="post-card">
+            <img src="${post.image || "https://via.placeholder.com/400x250"}" alt="${post.title}">
+            <div class="post-info">
+                <h3>${post.title}</h3>
+                <p>${post.excerpt ? post.excerpt.substring(0, 150) + "..." : "Click read more to see the full story."}</p>
+                <div class="post-meta">${post.category || "General"} | ${formattedDate}</div>
+                <a href="post.html?id=${post.id}" class="btn-read">Read More</a>
+            </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  // ... rest of loadMoreBtn logic
+}
+
+// --- UI INITIALIZERS ---
+function initMenu() {
+  const hamburger = document.getElementById("hamburger");
+  const navLinks = document.getElementById("navLinks");
+  if (hamburger && navLinks) {
+    hamburger.onclick = () => navLinks.classList.toggle("active");
+  }
+}
+
+function initSearch() {
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      const term = e.target.value.toLowerCase();
+      const filtered = blogPosts.filter(
+        (p) =>
+          p.title.toLowerCase().includes(term) ||
+          p.category.toLowerCase().includes(term),
+      );
+      displayPosts(term === "" ? null : filtered);
+    };
+  }
+}
+
+function initPostPage() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get("id");
+
+  if (postId) {
+    console.log("Fetching data for Post ID:", postId);
+    fetchSinglePost(postId);
+  } else {
+    console.warn(
+      "No Post ID found in the URL. Redirecting or showing default...",
+    );
+  }
+}
+
+// --- BOOTSTRAP ---
+window.onload = () => {
+  fetchPosts();
+};
+
+// COMPONENTS LOADING
+// --- COMPONENTS LOADING ---
+fetch("header.html")
+  .then((res) => res.text())
+  .then((headerHtml) => {
+    // 1. Put the header on the page
+    const placeholder = document.getElementById("header-placeholder");
+    if (placeholder) {
+      placeholder.innerHTML = headerHtml;
+
+      // 2. NOW that the header is there, initialize the menu and search
+      initMenu();
+      initSearch();
+
+      // 3. NOW fetch the categories from Sanity
+      fetchCategories();
+    }
+  });
+
+fetch("footer.html")
+  .then((res) => res.text())
+  .then((data) => {
+    const footerPlaceholder = document.getElementById("footer-placeholder");
+    if (footerPlaceholder) footerPlaceholder.innerHTML = data;
+  });
+
+const loadBtn = document.getElementById("loadMoreBtn");
+if (loadBtn) {
+  loadBtn.onclick = () => {
+    postsShown += 5;
+    displayPosts();
+  };
+}
+
+// jjjjjjjjjjjjjjjjjj
+window.onload = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get("id");
+
+  // Check: Are we on the Home page?
+  if (document.getElementById("postsContainer")) {
+    fetchPosts();
+  }
+
+  // Check: Are we on the Post page?
+  if (postId && document.getElementById("postTitle")) {
+    fetchSinglePost(postId);
+  }
+};

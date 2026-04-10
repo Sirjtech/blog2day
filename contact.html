@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact - My Blog</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div id="header-placeholder"></div>
+
+    <main class="container contact-page" style="padding: 60px 20px">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <h1 style="color: #0f2420">Get in Touch</h1>
+          <p>
+            Whether you're looking for a
+            <strong>premium web solution</strong> or want to discuss
+            <strong>market strategies</strong>, I'm always open to professional
+            inquiries.
+          </p>
+
+          <div class="info-item">
+            <i class="fas fa-envelope" style="color: #d4af37"></i>
+            <span>ooluwabunmi830@gmail.com</span>
+          </div>
+
+          <div class="info-item">
+            <i class="fas fa-map-marker-alt" style="color: #d4af37"></i>
+            <span>Based in Abeokuta, Nigeria | Remote Worldwide</span>
+          </div>
+
+          <div class="social-links-contact">
+            <h3>Follow My Analysis</h3>
+            <div class="social-icons">
+              <i class="fab fa-twitter"></i>
+              <i class="fab fa-linkedin-in"></i>
+              <i class="fab fa-telegram-plane"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-form-container">
+          <form
+            action="https://formspree.io/f/mgopqnvb"
+            method="POST"
+            id="contactForm"
+            class="premium-form"
+          >
+            <input type="hidden" name="_next" value="index.html" />
+
+            <div class="form-group">
+              <label>Name</label>
+              <input type="text" name="name" placeholder="Your Name" required />
+            </div>
+
+            <div class="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                placeholder="Your Email"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Inquiry Type</label>
+              <select name="inquiry_type">
+                <option value="Web Project">Web Development Project</option>
+                <option value="Trading">Trading Collaboration</option>
+                <option value="General">General Inquiry</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Message</label>
+              <textarea
+                name="message"
+                rows="5"
+                placeholder="How can I help you?"
+                required
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              class="btn-hero"
+              style="width: 100%; border: none; cursor: pointer"
+            >
+              Send Message
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+    <div id="footer-placeholder"></div>
+    <script src="script.js"></script>
+  </body>
+</html>
