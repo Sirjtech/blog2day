@@ -14,19 +14,15 @@ let postsShown = 5;
 // --- DYNAMIC DATA FETCH (POSTS) ---
 // --- DYNAMIC DATA FETCH (POSTS) ---
 async function fetchPosts() {
-  // We use coalesce to check 'excerpt' first, then 'body' as a backup
+  // This query gets your latest 10 posts
   const QUERY =
-    encodeURIComponent(`*[_type == "post"] | order(publishedAt desc) {
-    "id": _id,
+    encodeURIComponent(`*[_type == "post"] | order(publishedAt desc) [0...10] {
     title,
-    "category": categories[0]->title, 
+    "id": _id,
     "date": publishedAt,
-    "excerpt": coalesce(
-      excerpt[0].children[0].text, 
-      body[0].children[0].text, 
-      "No description available"
-    ),
-    "image": mainImage.asset->url
+    "image": mainImage.asset->url,
+    "category": categories[0]->title,
+    excerpt
   }`);
 
   const URL = `https://en43zbld.api.sanity.io/v1/data/query/production?query=${QUERY}`;
@@ -34,17 +30,40 @@ async function fetchPosts() {
   try {
     const res = await fetch(URL);
     const data = await res.json();
-    console.log("Posts from Sanity:", data.result);
+    const posts = data.result;
 
-    if (data.result && data.result.length > 0) {
-      // Update the global state so search and categories work correctly
-      blogPosts = data.result;
-      displayPosts(blogPosts);
-    } else {
-      console.log("No posts found in the cloud yet.");
+    const mainContainer = document.getElementById("postsContainer");
+    const popularContainer = document.getElementById("popular-grid"); // The bottom section
+
+    if (posts && posts.length > 0) {
+      // 1. Fill the Main Feed (Recent Posts)
+      if (mainContainer) {
+        mainContainer.innerHTML = posts
+          .map((post) => createPostCard(post))
+          .join("");
+      }
+
+      // 2. Fill the Popular Section (Bottom)
+      if (popularContainer) {
+        // We'll take the first 3 posts to show in the popular grid
+        const popularPosts = posts.slice(0, 3);
+        popularContainer.innerHTML = popularPosts
+          .map(
+            (post) => `
+          <div class="popular-card">
+            <img src="${post.image}" alt="${post.title}">
+            <div class="popular-card-content">
+              <span>${post.category || "Lifestyle"}</span>
+              <h4><a href="post.html?id=${post.id}">${post.title}</a></h4>
+            </div>
+          </div>
+        `,
+          )
+          .join("");
+      }
     }
   } catch (err) {
-    console.error("Post Fetch Error:", err);
+    console.error("Error fetching homepage posts:", err);
   }
 }
 

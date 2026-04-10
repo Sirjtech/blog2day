@@ -49,6 +49,13 @@ export default defineType({
       title: 'Body',
       type: 'blockContent',
     }),
+
+    defineField({
+      name: 'sourceUrl',
+      title: 'Original Source URL',
+      type: 'url',
+      description: 'Link to the news article you are reacting to',
+    }),
   ],
 
   preview: {
