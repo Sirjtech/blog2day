@@ -84,20 +84,23 @@ async function fetchPosts() {
 
 async function fetchSinglePost(id) {
   // 1. Updated Query: "recommended" now fetches a list (up to 6)
+
   const QUERY = encodeURIComponent(`{
-    "post": *[_id == "${id}"][0]{
-      title,
-      "date": publishedAt,
-      "category": categories[0]->title,
-      "image": mainImage.asset->url,
-      body,
-      "authorName": author->name
-    },
-    "recommended": *[_type == "post" && _id != "${id}"][0...6]{
-      title,
-      "id": _id
-    }
-  }`);
+  "post": *[_id == "${id}"][0]{
+    title,
+    "date": publishedAt,
+    "category": categories[0]->title,
+    "image": mainImage.asset->url,
+    body,
+    "authorName": author->name
+  },
+  "recommended": *[_type == "post" && _id != "${id}"][0...6]{
+    title,
+    "id": _id,
+    "image": mainImage.asset->url,
+    "category": categories[0]->title
+  }
+}`);
 
   const URL = `https://en43zbld.api.sanity.io/v1/data/query/production?query=${QUERY}`;
 
@@ -130,76 +133,95 @@ async function fetchSinglePost(id) {
 
       // Update Body Content
       // Update Body Content
+      // --- UPDATED BODY & IN-FEED RECOMMENDATIONS ---
       const contentArea = document.getElementById("contentPartOne");
 
       if (contentArea && post.body) {
-        contentArea.innerHTML = post.body
-          .map((block) => {
-            // 1. Handle Headings
-            if (block.style === "h2")
-              return `<h2>${block.children[0].text}</h2>`;
-            if (block.style === "h3")
-              return `<h3>${block.children[0].text}</h3>`;
-            if (block.style === "h4")
-              return `<h4>${block.children[0].text}</h4>`;
+        // Convert all blocks to HTML first
+        let htmlBlocks = post.body.map((block) => {
+          if (block.style === "h2") return `<h2>${block.children[0].text}</h2>`;
+          if (block.style === "h3") return `<h3>${block.children[0].text}</h3>`;
 
-            // 2. Handle Lists (Bullet points)
-            if (block.listItem === "bullet") {
-              const listText = block.children
-                .map((c) => {
-                  // If the text has the 'strong' mark, wrap it in <strong>
-                  return c.marks && c.marks.includes("strong")
-                    ? `<strong>${c.text}</strong>`
-                    : c.text;
-                })
-                .join("");
-              return `<li>${listText}</li>`;
-            }
+          if (block.listItem === "bullet") {
+            const listText = block.children
+              .map((c) =>
+                c.marks?.includes("strong")
+                  ? `<strong>${c.text}</strong>`
+                  : c.text,
+              )
+              .join("");
+            return `<li>${listText}</li>`;
+          }
 
-            // 3. Handle Normal Paragraphs (including bold words inside)
-            if (block._type === "block") {
-              const paragraphText = block.children
-                .map((c) => {
-                  // Check for Bold (strong) or Italic (em)
-                  let text = c.text;
-                  if (c.marks && c.marks.includes("strong"))
-                    text = `<strong>${text}</strong>`;
-                  if (c.marks && c.marks.includes("em"))
-                    text = `<em>${text}</em>`;
-                  return text;
-                })
-                .join("");
+          if (block._type === "block") {
+            const pText = block.children
+              .map((c) => {
+                let t = c.text;
+                if (c.marks?.includes("strong")) t = `<strong>${t}</strong>`;
+                if (c.marks?.includes("em")) t = `<em>${t}</em>`;
+                return t;
+              })
+              .join("");
+            return `<p>${pText}</p>`;
+          }
+          return "";
+        });
 
-              return `<p>${paragraphText}</p>`;
-            }
+        // Function to create a suggestion box HTML
+        const createRecBox = (recPost) => `
+          <div class="mid-post-suggestion">
+            <span>Recommended</span>
+            <a href="post.html?id=${recPost.id}">${recPost.title}</a>
+          </div>
+        `;
 
-            return "";
-          })
-          .join("");
+        // Insert recommendations at specific points (e.g., after block 3 and block 7)
+        if (recommended && recommended.length > 0) {
+          if (htmlBlocks.length > 4) {
+            htmlBlocks.splice(3, 0, createRecBox(recommended[0]));
+          }
+          if (htmlBlocks.length > 9 && recommended.length > 1) {
+            htmlBlocks.splice(8, 0, createRecBox(recommended[1]));
+          }
+        }
+
+        contentArea.innerHTML = htmlBlocks.join("");
       }
 
+      // --- MULTIPLE RECOMMENDATIONS LOGIC ---
       // --- MULTIPLE RECOMMENDATIONS LOGIC ---
       const suggestionBox = document.getElementById("midSuggestionBox");
       const suggestionLinkContainer =
         document.getElementById("midSuggestionLink");
+      const bottomGrid = document.getElementById("bottomSuggestions");
 
-      if (suggestionBox && recommended && recommended.length > 0) {
-        suggestionBox.style.display = "block";
+      if (recommended && recommended.length > 0) {
+        // 1. Fill the small "Mid-Post" text link box
+        if (suggestionBox && suggestionLinkContainer) {
+          suggestionBox.style.display = "block";
+          suggestionLinkContainer.innerHTML = `
+            <a href="post.html?id=${recommended[0].id}">${recommended[0].title}</a>
+          `;
+        }
 
-        // Loop through the recommended array and create a list of links
-        suggestionLinkContainer.innerHTML = `
-          <ul class="recommended-list">
-            ${recommended
-              .map(
-                (rec) => `
-              <li><a href="post.html?id=${rec.id}">${rec.title}</a></li>
+        // 2. Fill the "You Might Also Like" Bottom Grid with Cards
+        if (bottomGrid) {
+          bottomGrid.innerHTML = recommended
+            .slice(0, 3) // Show top 3 recommendations
+            .map(
+              (rec) => `
+              <div class="popular-card">
+                <img src="${rec.image || "https://via.placeholder.com/400x250"}" alt="${rec.title}">
+                <div class="popular-card-content">
+                  <h4><a href="post.html?id=${rec.id}">${rec.title}</a></h4>
+                </div>
+              </div>
             `,
-              )
-              .join("")}
-          </ul>
-        `;
-      } else if (suggestionBox) {
-        suggestionBox.style.display = "none";
+            )
+            .join("");
+        }
+      } else {
+        if (suggestionBox) suggestionBox.style.display = "none";
       }
     }
   } catch (err) {
@@ -352,11 +374,20 @@ fetch("header.html")
     }
   });
 
+// --- COMPONENTS LOADING ---
 fetch("footer.html")
   .then((res) => res.text())
   .then((data) => {
     const footerPlaceholder = document.getElementById("footer-placeholder");
-    if (footerPlaceholder) footerPlaceholder.innerHTML = data;
+    if (footerPlaceholder) {
+      footerPlaceholder.innerHTML = data;
+
+      // ADD THIS LINE BELOW:
+      const yearSpan = document.getElementById("currentYear");
+      if (yearSpan) {
+        yearSpan.textContent = new Date().getFullYear();
+      }
+    }
   });
 
 const loadBtn = document.getElementById("loadMoreBtn");

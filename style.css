@@ -927,3 +927,90 @@ footer {
     flex: 2;
   }
 }
+
+/* popular post card */
+/* --- Popular Section Styling (Deep Green & Gold) --- */
+.popular-section h2 {
+  border-left: 4px solid #d4af37; /* Gold accent */
+  padding-left: 15px;
+  margin-bottom: 30px;
+  font-size: 1.8rem;
+  color: #0f2420; /* Deep Green */
+}
+
+.popular-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns on desktop */
+  gap: 25px;
+}
+
+.popular-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.popular-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  border-bottom: 3px solid #d4af37; /* Gold highlight on hover */
+}
+
+.popular-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.popular-card-content {
+  padding: 20px;
+}
+
+.popular-card-content span {
+  background: #0f2420; /* Deep Green */
+  color: #d4af37; /* Gold */
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.popular-card-content h4 {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.popular-card-content h4 a {
+  text-decoration: none;
+  color: #333;
+  font-size: 1.05rem;
+  transition: color 0.3s;
+}
+
+.popular-card-content h4 a:hover {
+  color: #d4af37;
+}
+
+/* --- Mobile Fix for Popular Section --- */
+@media (max-width: 768px) {
+  .popular-grid {
+    grid-template-columns: 1fr; /* 1 column on mobile */
+  }
+
+  .popular-section h2 {
+    font-size: 1.5rem;
+  }
+}
+
+.container {
+  overflow: hidden;
+}
