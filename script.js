@@ -30,30 +30,43 @@ async function fetchPosts() {
     const res = await fetch(URL);
     const data = await res.json();
 
-    // --- THIS IS THE CRITICAL ADDITION ---
-    // Save the data to your global variable so the search/render functions work
-    blogPosts = data.result;
+    // 1. Update the global array so search and other functions work
+    blogPosts = data.result || [];
 
     const mainContainer = document.getElementById("postsContainer");
     const popularContainer = document.getElementById("popular-grid");
 
-    if (blogPosts && blogPosts.length > 0) {
-      // 1. Fill the Main Feed
+    if (blogPosts.length > 0) {
+      // 2. Render Main Feed
       if (mainContainer) {
-        // Use the global blogPosts we just filled
         mainContainer.innerHTML = blogPosts
-          .map((post) => createPostCard(post))
+          .map((post) => {
+            const dateStr = post.date
+              ? new Date(post.date).toLocaleDateString()
+              : "Recent";
+            return `
+              <article class="post-card">
+                  <img src="${post.image || "https://via.placeholder.com/400x250"}" alt="${post.title}">
+                  <div class="post-info">
+                      <h3>${post.title}</h3>
+                      <p>${post.excerpt ? post.excerpt.substring(0, 150) + "..." : "Click read more to see the full story."}</p>
+                      <div class="post-meta">${post.category || "General"} | ${dateStr}</div>
+                      <a href="post.html?id=${post.id}" class="btn-read">Read More</a>
+                  </div>
+              </article>
+            `;
+          })
           .join("");
       }
 
-      // 2. Fill the Popular Section
+      // 3. Render Popular Section
       if (popularContainer) {
         const popularPosts = blogPosts.slice(0, 3);
         popularContainer.innerHTML = popularPosts
           .map(
             (post) => `
             <div class="popular-card">
-              <img src="${post.image}" alt="${post.title}">
+              <img src="${post.image || "https://via.placeholder.com/400x250"}" alt="${post.title}">
               <div class="popular-card-content">
                 <span>${post.category || "Lifestyle"}</span>
                 <h4><a href="post.html?id=${post.id}">${post.title}</a></h4>
@@ -63,22 +76,6 @@ async function fetchPosts() {
           )
           .join("");
       }
-
-      mainContainer.innerHTML = blogPosts
-        .map(
-          (post) => `
-    <article class="post-card">
-        <img src="${post.image || "https://via.placeholder.com/400x250"}" alt="${post.title}">
-        <div class="post-info">
-            <h3>${post.title}</h3>
-            <p>${post.excerpt ? post.excerpt.substring(0, 150) + "..." : "Click read more to see the full story."}</p>
-            <div class="post-meta">${post.category || "General"} | ${new Date(post.date).toLocaleDateString()}</div>
-            <a href="post.html?id=${post.id}" class="btn-read">Read More</a>
-        </div>
-    </article>
-  `,
-        )
-        .join("");
     }
   } catch (err) {
     console.error("Error fetching homepage posts:", err);
