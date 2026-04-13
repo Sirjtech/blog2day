@@ -8,7 +8,7 @@ const SANITY_CONFIG = {
 
 // 2. STATE MANAGEMENT
 let blogPosts = [];
-let postsShown = 5;
+let postsShown = 8;
 
 // --- DYNAMIC DATA FETCH (POSTS) ---
 // --- DYNAMIC DATA FETCH (POSTS) ---
